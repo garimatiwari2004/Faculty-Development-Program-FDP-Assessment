@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import StudentForm from './components/StudentForm.jsx'
 import StudentTable from './components/StudentTable.jsx'
 import { sampleStudents } from './data/sampleStudents.js'
-import { createStudent, fetchStudents } from './services/studentService.js'
+import { createStudent, fetchStudents, updateStudent } from './services/studentService.js'
 import { filterStudents } from './utils/studentFilters.js'
 import './App.css'
 
@@ -59,7 +59,18 @@ function App() {
 
   async function handleSave(values) {
     if (source === 'preview') {
-      setPreviewStudents((current) => [{ ...values, _id: crypto.randomUUID() }, ...current])
+      if (editingStudent) {
+        setPreviewStudents((current) => current.map((student) => (
+          student._id === editingStudent._id ? { ...student, ...values } : student
+        )))
+      } else {
+        setPreviewStudents((current) => [{ ...values, _id: crypto.randomUUID() }, ...current])
+      }
+    } else if (editingStudent) {
+      const updated = await updateStudent(editingStudent._id, values)
+      setApiStudents((current) => current.map((student) => (
+        student._id === updated._id ? updated : student
+      )))
     } else {
       const created = await createStudent(values)
       setApiStudents((current) => [created, ...current])
