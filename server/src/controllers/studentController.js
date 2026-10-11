@@ -49,7 +49,11 @@ export async function createStudent(req, res) {
 export async function updateStudent(req, res) {
   try {
     // Challenge 4: validate the ObjectId and enable update validators before saving.
-    const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid student ID" });
+    }
+
+    const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
