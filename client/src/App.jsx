@@ -23,13 +23,13 @@ function App() {
   useEffect(() => {
     if (source !== 'api') return
 
-    fetchStudents()
+    fetchStudents(query, statusFilter)
       .then((records) => setApiStudents(records))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))
-  }, [source, refreshKey])
+  }, [source, refreshKey, query, statusFilter])
 
-  const visibleStudents = filterStudents(students, query, statusFilter)
+  const visibleStudents = source === 'preview' ? filterStudents(students, query, statusFilter) : apiStudents
   const placedCount = students.filter((student) => student.status === 'Placed').length
   const offeredCount = students.filter((student) => student.status === 'Offered').length
 
@@ -57,6 +57,13 @@ function App() {
     setRefreshKey((key) => key + 1)
   }
 
+  function updateFilters(nextQuery, nextStatus) {
+    setQuery(nextQuery)
+    setStatusFilter(nextStatus)
+    setError('')
+    setLoading(source === 'api')
+  }
+
   async function handleSave(values) {
     if (source === 'preview') {
       if (editingStudent) {
@@ -66,14 +73,15 @@ function App() {
       } else {
         setPreviewStudents((current) => [{ ...values, _id: crypto.randomUUID() }, ...current])
       }
-    } else if (editingStudent) {
-      const updated = await updateStudent(editingStudent._id, values)
-      setApiStudents((current) => current.map((student) => (
-        student._id === updated._id ? updated : student
-      )))
     } else {
-      const created = await createStudent(values)
-      setApiStudents((current) => [created, ...current])
+      if (editingStudent) {
+        await updateStudent(editingStudent._id, values)
+      } else {
+        await createStudent(values)
+      }
+      setError('')
+      setLoading(true)
+      setRefreshKey((key) => key + 1)
     }
 
     setFormOpen(false)
@@ -161,13 +169,13 @@ function App() {
                 type="search"
                 value={query}
                 placeholder="Search name or email"
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => updateFilters(event.target.value, statusFilter)}
               />
-              {query && <button type="button" aria-label="Clear search" onClick={() => setQuery('')}>×</button>}
+              {query && <button type="button" aria-label="Clear search" onClick={() => updateFilters('', statusFilter)}>×</button>}
             </label>
             <label className="filter-field">
               <span className="sr-only">Filter by placement status</span>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <select value={statusFilter} onChange={(event) => updateFilters(query, event.target.value)}>
                 <option>All statuses</option>
                 <option>Applied</option>
                 <option>Interview</option>
@@ -179,7 +187,7 @@ function App() {
               <button
                 className="text-button clear-filters"
                 type="button"
-                onClick={() => { setQuery(''); setStatusFilter('All statuses') }}
+                onClick={() => updateFilters('', 'All statuses')}
               >Clear filters</button>
             )}
             <span className="record-count">{visibleStudents.length} RECORDS</span>

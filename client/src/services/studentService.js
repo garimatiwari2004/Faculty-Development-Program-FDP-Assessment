@@ -14,8 +14,11 @@ async function request(path, options) {
   return payload.data
 }
 
-export async function fetchStudents() {
-  return request('/students')
+export async function fetchStudents(search = '', status = 'All statuses') {
+  const query = new URLSearchParams({ limit: '100' })
+  if (search.trim()) query.set('q', search.trim())
+  if (status !== 'All statuses') query.set('status', status)
+  return request(`/students?${query}`)
 }
 
 export async function createStudent(student) {
